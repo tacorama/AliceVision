@@ -25,6 +25,8 @@
 #include <aliceVision/track/tracksUtils.hpp>
 #include <aliceVision/track/trackIO.hpp>
 
+#include <aliceVision/dataio/json.hpp>
+
 #include <aliceVision/multiview/triangulation/triangulationDLT.hpp>
 
 #include <cstdlib>
@@ -40,52 +42,6 @@ using namespace aliceVision;
 
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
-
-std::vector<boost::json::value> readJsons(std::istream& is, boost::json::error_code& ec)
-{
-    std::vector<boost::json::value> jvs;
-    boost::json::stream_parser p;
-    std::string line;
-    std::size_t n = 0;
-
-
-    while(true)
-    {
-        if(n == line.size())
-        {
-            if(!std::getline(is, line))
-            {
-                break;
-            }
-
-            n = 0;
-        }
-
-        //Consume at least part of the line
-        n += p.write_some( line.data() + n, line.size() - n, ec);
-
-        //If the parser found a value, add it
-        if (p.done())
-        {
-            jvs.push_back(p.release());
-            p.reset();
-        }
-    }
-
-    if (!p.done())
-    {
-        //Try to extract the end
-        p.finish(ec);
-        if (ec.failed())
-        {
-            return jvs;
-        }
-
-        jvs.push_back(p.release());
-    }
-
-    return jvs;
-}
 
 bool estimatePairAngle(const sfmData::SfMData & sfmData, const sfm::ReconstructedPair & pair, const track::TracksMap& tracksMap, const track::TracksPerView & tracksPerView, const feature::FeaturesPerView & featuresPerView, const double maxDistance, double & resultAngle, std::vector<IndexT> & usedTracks)
 {
@@ -238,6 +194,13 @@ bool buildSfmData(sfmData::SfMData & sfmData, const sfm::ReconstructedPair & pai
     Mat34 P1, P2;
     P_from_KRt(Kref, Mat3::Identity(), Vec3::Zero(), P1);
     P_from_KRt(Knext, pair.R, pair.t, P2);
+
+    geometry::Pose3 poseNext;
+    poseNext.setRotation(pair.R);
+    poseNext.setTranslation(pair.t);
+    sfmData::CameraPose cposeNext(poseNext, false);
+    sfmData.getPoses()[refView.getPoseId()] = sfmData::CameraPose();
+    sfmData.getPoses()[nextView.getPoseId()] = cposeNext;
     
     size_t count = 0;
     std::vector<double> angles;
@@ -440,6 +403,10 @@ int aliceVision_main(int argc, char** argv)
     {
         return EXIT_FAILURE;
     }
+
+    ALICEVISION_LOG_INFO("Best selected pair is : ");
+    ALICEVISION_LOG_INFO(" - " << sfmData.getView(bestPair.reference).getImage().getImagePath());
+    ALICEVISION_LOG_INFO(" - " << sfmData.getView(bestPair.next).getImage().getImagePath());
 
     sfmDataIO::Save(sfmData, sfmDataOutputFilename, sfmDataIO::ESfMData::ALL);
 

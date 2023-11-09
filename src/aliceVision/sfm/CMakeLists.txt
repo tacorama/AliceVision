@@ -12,6 +12,7 @@ set(sfm_files_headers
   pipeline/RigSequence.hpp
   pipeline/pairwiseMatchesIO.hpp
   pipeline/RelativePoseInfo.hpp
+  pipeline/relativePoses.hpp
   pipeline/structureFromKnownPoses/StructureEstimationFromKnownPoses.hpp
   pipeline/panorama/ReconstructionEngine_panorama.hpp
   pipeline/regionsIO.hpp
@@ -42,6 +43,7 @@ set(sfm_files_sources
   pipeline/ReconstructionEngine.cpp
   pipeline/RigSequence.cpp
   pipeline/RelativePoseInfo.cpp
+  pipeline/relativePoses.cpp
   pipeline/structureFromKnownPoses/StructureEstimationFromKnownPoses.cpp
   pipeline/panorama/ReconstructionEngine_panorama.cpp
   pipeline/regionsIO.cpp
@@ -76,6 +78,7 @@ alicevision_add_library(aliceVision_sfm
     aliceVision_sfmDataIO
     Boost::filesystem
     Boost::boost
+    Boost::json
     ${CERES_LIBRARIES}
   PRIVATE_LINKS
     ${LEMON_LIBRARY}

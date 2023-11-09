@@ -296,10 +296,16 @@ int aliceVision_main(int argc, char** argv)
     // Define range to compute
     if(rangeStart != -1)
     {
-      if(rangeStart < 0 || rangeSize < 0 || rangeStart > sfmData.getViews().size())
+      if(rangeStart < 0 || rangeSize < 0)
       {
         ALICEVISION_LOG_ERROR("Range is incorrect");
         return EXIT_FAILURE;
+      }
+
+      if (rangeStart > sfmData.getViews().size())
+      {
+        ALICEVISION_LOG_INFO("Empty range to compute");
+        return EXIT_SUCCESS;
       }
 
       if(rangeStart + rangeSize > sfmData.getViews().size())
