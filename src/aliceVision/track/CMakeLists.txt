@@ -1,6 +1,7 @@
 # Headers
 set(tracks_files_headers
   Track.hpp
+  TracksHandler.hpp
   TracksBuilder.hpp
   tracksUtils.hpp
   trackIO.hpp
@@ -8,6 +9,7 @@ set(tracks_files_headers
 
 # Sources
 set(tracks_files_sources
+  TracksHandler.cpp
   TracksBuilder.cpp
   tracksUtils.cpp
   trackIO.cpp
@@ -19,6 +21,7 @@ alicevision_add_library(aliceVision_track
     aliceVision_feature
     aliceVision_matching
     aliceVision_stl
+    aliceVision_sfmData
     Boost::json
   PRIVATE_LINKS
     ${LEMON_LIBRARY}
