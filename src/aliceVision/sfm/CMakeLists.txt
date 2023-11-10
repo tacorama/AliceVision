@@ -9,6 +9,7 @@ set(sfm_files_headers
   pipeline/localization/SfMLocalizer.hpp
   pipeline/sequential/ReconstructionEngine_sequentialSfM.hpp
   pipeline/expanding/SfmResection.hpp
+  pipeline/expanding/SfmTriangulation.hpp
   pipeline/ReconstructionEngine.hpp
   pipeline/RigSequence.hpp
   pipeline/pairwiseMatchesIO.hpp
@@ -42,6 +43,7 @@ set(sfm_files_sources
   pipeline/localization/SfMLocalizer.cpp
   pipeline/sequential/ReconstructionEngine_sequentialSfM.cpp
   pipeline/expanding/SfmResection.cpp
+  pipeline/expanding/SfmTriangulation.cpp
   pipeline/ReconstructionEngine.cpp
   pipeline/RigSequence.cpp
   pipeline/RelativePoseInfo.cpp
