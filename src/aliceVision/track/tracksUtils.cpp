@@ -185,23 +185,31 @@ void getTracksIdVector(const TracksMap& tracks, std::set<std::size_t>* tracksIds
         tracksIds->insert(iterT->first);
 }
 
-bool getFeatureIdInViewPerTrack(const TracksMap& allTracks, const std::set<std::size_t>& trackIds, IndexT viewId, std::vector<FeatureId>* out_featId)
+bool getFeatureIdInViewPerTrack(const TracksMap& allTracks,
+                                       const std::set<std::size_t>& trackIds,
+                                       IndexT viewId,
+                                       std::vector<FeatureId>& out_featId)
 {
-    for (std::size_t trackId : trackIds)
+    for(std::size_t trackId : trackIds)
     {
         TracksMap::const_iterator iterT = allTracks.find(trackId);
 
         // ignore it if the track doesn't exist
-        if (iterT == allTracks.end())
+        if(iterT == allTracks.end())
+        {
             continue;
+        }
 
         // try to find imageIndex
         const Track& map_ref = iterT->second;
         auto iterSearch = map_ref.featPerView.find(viewId);
         if (iterSearch != map_ref.featPerView.end())
+        {
             out_featId->emplace_back(map_ref.descType, iterSearch->second.featureId);
+        }
     }
-    return !out_featId->empty();
+
+    return !out_featId.empty();
 }
 
 void tracksToIndexedMatches(const TracksMap& tracks, const std::vector<IndexT>& filterIndex, std::vector<IndMatch>* out_index)
