@@ -205,7 +205,7 @@ bool getFeatureIdInViewPerTrack(const TracksMap& allTracks,
         auto iterSearch = map_ref.featPerView.find(viewId);
         if (iterSearch != map_ref.featPerView.end())
         {
-            out_featId->emplace_back(map_ref.descType, iterSearch->second.featureId);
+            out_featId.emplace_back(map_ref.descType, iterSearch->second.featureId);
         }
     }
 

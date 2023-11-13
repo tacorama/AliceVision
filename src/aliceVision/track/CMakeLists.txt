@@ -22,6 +22,7 @@ alicevision_add_library(aliceVision_track
     aliceVision_matching
     aliceVision_stl
     aliceVision_sfmData
+    aliceVision_dataio
     Boost::json
   PRIVATE_LINKS
     ${LEMON_LIBRARY}

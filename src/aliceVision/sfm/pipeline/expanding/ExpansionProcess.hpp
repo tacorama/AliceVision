@@ -40,7 +40,7 @@ private:
      * @param[in] sfmData the object to update
      * @param[in] tracks all tracks of the scene as a map {trackId, track}
      */
-    void upgradeSfm(sfmData::SfMData & sfmData, const track::TracksMap& tracks)
+    void upgradeSfm(sfmData::SfMData & sfmData, const track::TracksMap& tracks);
 
 private:
     

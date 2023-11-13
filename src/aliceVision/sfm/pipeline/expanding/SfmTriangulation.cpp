@@ -317,7 +317,7 @@ bool SfmTriangulation::processTrack(
         const std::shared_ptr<camera::IntrinsicBase> intrinsic = sfmData.getIntrinsicsharedPtr(view.getIntrinsicId());
         const Eigen::Matrix4d pose = sfmData.getPose(view).getTransform().getHomogeneous();
 
-        std::size_t featureId = track.featPerView.at(viewId);
+        std::size_t featureId = track.featPerView.at(viewId).featureId;
         const auto & viewFeatures = featuresPerView.getFeaturesPerDesc(viewId);
         const auto & viewFeaturesDesc = viewFeatures.at(descType);
         const auto & pt = viewFeaturesDesc[featureId];
@@ -357,7 +357,7 @@ bool SfmTriangulation::processTrack(
         sfmData::Observation & o = result.observations[viewId];
         
         //Retrieve observation data
-        std::size_t featureId = track.featPerView.at(viewId);
+        std::size_t featureId = track.featPerView.at(viewId).featureId;
         const auto & viewFeatures = featuresPerView.getFeaturesPerDesc(viewId);
         const auto & viewFeaturesDesc = viewFeatures.at(descType);
         const auto & pt = viewFeaturesDesc[featureId];

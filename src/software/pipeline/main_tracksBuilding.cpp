@@ -123,6 +123,25 @@ int aliceVision_main(int argc, char** argv)
     track::TracksMap mapTracks;
     tracksBuilder.exportToSTL(mapTracks);
 
+    //Fill additional data
+    for (auto & ptrack : mapTracks)
+    {
+        auto & track = ptrack.second;
+
+        for (auto & pitem : track.featPerView)
+        {
+            IndexT viewId = pitem.first;
+            track::TrackItem & item = pitem.second;
+            const auto & feats = featuresPerView.getFeaturesPerDesc(viewId);
+
+            const feature::PointFeatures & features = feats.at(track.descType);
+            const feature::PointFeature & feature = features.at(item.featureId);
+
+            item.coords = feature.coords().cast<double>();
+            item.scale = feature.scale();
+        }
+    }
+
     // write the json file with the tree
     ALICEVISION_LOG_INFO("Export to file");
     std::stringstream ss;

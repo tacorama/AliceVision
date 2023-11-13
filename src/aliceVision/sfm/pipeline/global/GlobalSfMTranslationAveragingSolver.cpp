@@ -498,7 +498,7 @@ void GlobalSfMTranslationAveragingSolver::ComputePutativeTranslation_EdgesCovera
                                     // create pairwise matches from inlier track
                                     for (size_t index_I = 0; index_I < track.featPerView.size(); ++index_I)
                                     {
-                                        Track::FeatureIdPerView::const_iterator iter_I = track.featPerView.begin();
+                                        Track::TrackInfoPerView::const_iterator iter_I = track.featPerView.begin();
                                         std::advance(iter_I, index_I);
 
                                         // extract camera indexes
@@ -508,7 +508,7 @@ void GlobalSfMTranslationAveragingSolver::ComputePutativeTranslation_EdgesCovera
                                         // loop on subtracks
                                         for (size_t index_J = index_I + 1; index_J < track.featPerView.size(); ++index_J)
                                         {
-                                            Track::FeatureIdPerView::const_iterator iter_J = track.featPerView.begin();
+                                            Track::TrackInfoPerView::const_iterator iter_J = track.featPerView.begin();
                                             std::advance(iter_J, index_J);
 
                                             // extract camera indexes
@@ -603,7 +603,7 @@ bool GlobalSfMTranslationAveragingSolver::Estimate_T_triplet(const SfMData& sfmD
     {
         const track::Track& track = iterTracks->second;
         size_t index = 0;
-        for (track::Track::FeatureIdPerView::const_iterator iter = track.featPerView.begin(); iter != track.featPerView.end(); ++iter, ++index)
+        for (track::Track::TrackInfoPerView::const_iterator iter = track.featPerView.begin(); iter != track.featPerView.end(); ++iter, ++index)
         {
             const size_t idx_view = iter->first;
             const feature::PointFeature pt = normalizedFeaturesPerView.getFeatures(idx_view, track.descType)[iter->second.featureId];
@@ -691,7 +691,7 @@ bool GlobalSfMTranslationAveragingSolver::Estimate_T_triplet(const SfMData& sfmD
         const size_t trackId = vec_inliers[idx];
         const track::submapTrack& track = tracks.at(trackId);
         Observations& obs = structure[idx].obs;
-        for (track::Track::FeatureIdPerView::const_iterator it = track.begin(); it != track.end(); ++it)
+        for (track::Track::TrackInfoPerView::const_iterator it = track.begin(); it != track.end(); ++it)
         {
             // get view Id and feat ID
             const size_t viewIndex = it->first;

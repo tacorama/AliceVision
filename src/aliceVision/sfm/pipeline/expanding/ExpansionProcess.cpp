@@ -19,7 +19,7 @@ bool ExpansionProcess::process(sfmData::SfMData & sfmData, const track::TracksMa
     return true;
 }
 
-void prepareExisting(sfmData::SfMData & sfmData, const track::TracksMap& tracks)
+void ExpansionProcess::prepareExisting(sfmData::SfMData & sfmData, const track::TracksMap& tracks)
 {
     //Prepare existing data
     remapExistingLandmarks(sfmData, tracks);
@@ -28,7 +28,7 @@ void prepareExisting(sfmData::SfMData & sfmData, const track::TracksMap& tracks)
     // We want to make sure everything is on par with requirements
     if (sfmData.getPoses().empty() == false)
     {
-        upgradeSfmData(sfmData, tracks);
+        upgradeSfm(sfmData, tracks);
     }
 
 }
@@ -79,7 +79,7 @@ void ExpansionProcess::remapExistingLandmarks(sfmData::SfMData & sfmData, const 
         //For each feature in track
         for (const auto& featView : track.featPerView)
         {
-            ObsKey key(featView.first, featView.second, track.descType);
+            ObsKey key(featView.first, featView.second.featureId, track.descType);
 
             //We assume one feature is associated to only one track
             const ObsToLandmark::const_iterator it = obsToLandmark.find(key);
