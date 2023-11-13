@@ -165,6 +165,12 @@ class SfMData
     std::set<IndexT> getValidViews() const;
 
     /**
+     * @brief List the view indexes
+     * @return view indexes list
+     */
+    std::set<IndexT> getViewIds() const;
+
+    /**
      * @brief List the intrinsic indexes that have valid camera intrinsic and pose.
      * @return intrinsic indexes list
      */

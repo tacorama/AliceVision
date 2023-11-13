@@ -15,7 +15,6 @@
 #include <aliceVision/sfmData/SfMData.hpp>
 #include <aliceVision/sfmDataIO/sfmDataIO.hpp>
 #include <aliceVision/sfm/pipeline/regionsIO.hpp>
-#include <aliceVision/feature/imageDescriberCommon.hpp>
 
 #include <aliceVision/track/TracksBuilder.hpp>
 #include <aliceVision/track/tracksUtils.hpp>
@@ -242,16 +241,12 @@ int aliceVision_main(int argc, char** argv)
 {
     // command-line parameters
     std::string sfmDataFilename;
-    std::vector<std::string> featuresFolders;
     std::string tracksFilename;
     std::string outputDirectory;
     int rangeStart = -1;
     int rangeSize = 1;
     const size_t minInliers = 35;
     bool enforcePureRotation = false;
-
-    // user optional parameters
-    std::string describerTypesName = feature::EImageDescriberType_enumToString(feature::EImageDescriberType::SIFT);
 
 
     int randomSeed = std::mt19937::default_seed;
@@ -264,8 +259,6 @@ int aliceVision_main(int argc, char** argv)
 
     po::options_description optionalParams("Optional parameters");
     optionalParams.add_options()
-    ("featuresFolders,f", po::value<std::vector<std::string>>(&featuresFolders)->multitoken(), "Path to folder(s) containing the extracted features.")
-    ("describerTypes,d", po::value<std::string>(&describerTypesName)->default_value(describerTypesName),feature::EImageDescriberType_informations().c_str())
     ("enforcePureRotation,e", po::value<bool>(&enforcePureRotation)->default_value(enforcePureRotation), "Enforce pure rotation in estimation.")
     ("rangeStart", po::value<int>(&rangeStart)->default_value(rangeStart), "Range image index start.")
     ("rangeSize", po::value<int>(&rangeSize)->default_value(rangeSize), "Range size.");
@@ -321,21 +314,6 @@ int aliceVision_main(int argc, char** argv)
     ALICEVISION_LOG_DEBUG("Range to compute: rangeStart=" << rangeStart << ", rangeSize=" << rangeSize);
 
     
-
-    // get imageDescriber type
-    const std::vector<feature::EImageDescriberType> describerTypes =
-        feature::EImageDescriberType_stringToEnums(describerTypesName);
-        
-
-    // features reading
-    feature::FeaturesPerView featuresPerView;
-    ALICEVISION_LOG_INFO("Load features");
-    if(!sfm::loadFeaturesPerView(featuresPerView, sfmData, featuresFolders, describerTypes))
-    {
-        ALICEVISION_LOG_ERROR("Invalid features.");
-        return EXIT_FAILURE;
-    }
-
     // Load tracks
     ALICEVISION_LOG_INFO("Load tracks");
     std::ifstream tracksFile(tracksFilename);
@@ -398,8 +376,6 @@ int aliceVision_main(int argc, char** argv)
         aliceVision::track::TracksMap mapTracksCommon;
         track::getCommonTracksInImagesFast({refImage, nextImage}, mapTracks, mapTracksPerView, mapTracksCommon);
 
-        feature::MapFeaturesPerDesc& refFeaturesPerDesc = featuresPerView.getFeaturesPerDesc(refImage);
-        feature::MapFeaturesPerDesc& nextFeaturesPerDesc = featuresPerView.getFeaturesPerDesc(nextImage);
 
         //Build features coordinates matrices
         const std::size_t n = mapTracksCommon.size();
@@ -410,14 +386,8 @@ int aliceVision_main(int argc, char** argv)
         {
             const track::Track& track = commonItem.second;
 
-            const feature::PointFeatures& refFeatures = refFeaturesPerDesc.at(track.descType);
-            const feature::PointFeatures& nextfeatures = nextFeaturesPerDesc.at(track.descType);
-
-            IndexT refFeatureId = track.featPerView.at(refImage).featureId;
-            IndexT nextfeatureId = track.featPerView.at(nextImage).featureId;
-
-            refX.col(pos) = refFeatures[refFeatureId].coords().cast<double>();
-            nextX.col(pos) = nextfeatures[nextfeatureId].coords().cast<double>();
+            refX.col(pos) = track.featPerView.at(refImage).coords;
+            nextX.col(pos) = track.featPerView.at(nextImage).coords;
 
             pos++;
         }

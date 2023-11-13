@@ -198,6 +198,16 @@ std::set<IndexT> SfMData::getValidViews() const
     return valid_idx;
 }
 
+std::set<IndexT> SfMData::getViewIds() const
+{
+    std::set<IndexT> valid_idx;
+    for (auto item : _views)
+    {
+        valid_idx.insert(item.first);
+    }
+    return valid_idx;
+}
+
 std::set<IndexT> SfMData::getReconstructedIntrinsics() const
 {
     std::set<IndexT> valid_idx;

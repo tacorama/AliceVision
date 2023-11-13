@@ -14,7 +14,7 @@ namespace track {
 class TracksHandler
 {
 public:
-    
+    bool load(const std::string & pathJson, const std::set<IndexT> & viewIds);
 
 private:
     track::TracksPerView _mapTracksPerView;

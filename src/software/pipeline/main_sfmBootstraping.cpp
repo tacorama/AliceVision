@@ -43,7 +43,7 @@ using namespace aliceVision;
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
 
-bool estimatePairAngle(const sfmData::SfMData & sfmData, const sfm::ReconstructedPair & pair, const track::TracksMap& tracksMap, const track::TracksPerView & tracksPerView, const feature::FeaturesPerView & featuresPerView, const double maxDistance, double & resultAngle, std::vector<IndexT> & usedTracks)
+bool estimatePairAngle(const sfmData::SfMData & sfmData, const sfm::ReconstructedPair & pair, const track::TracksMap& tracksMap, const track::TracksPerView & tracksPerView, const double maxDistance, double & resultAngle, std::vector<IndexT> & usedTracks)
 {
     usedTracks.clear();
 
@@ -63,9 +63,6 @@ bool estimatePairAngle(const sfmData::SfMData & sfmData, const sfm::Reconstructe
     aliceVision::track::TracksMap mapTracksCommon;
     track::getCommonTracksInImagesFast({pair.reference, pair.next}, tracksMap, tracksPerView, mapTracksCommon);
 
-    const feature::MapFeaturesPerDesc& refFeaturesPerDesc = featuresPerView.getFeaturesPerDesc(pair.reference);
-    const feature::MapFeaturesPerDesc& nextFeaturesPerDesc = featuresPerView.getFeaturesPerDesc(pair.next);
-
     const Eigen::Matrix3d Kref = refPinhole->K();
     const Eigen::Matrix3d Knext = nextPinhole->K();
 
@@ -82,12 +79,11 @@ bool estimatePairAngle(const sfmData::SfMData & sfmData, const sfm::Reconstructe
     for(const auto& commonItem : mapTracksCommon)
     {
         const track::Track& track = commonItem.second;
-        const feature::PointFeatures& refFeatures = refFeaturesPerDesc.at(track.descType);
-        const feature::PointFeatures& nextfeatures = nextFeaturesPerDesc.at(track.descType);
+        
         const IndexT refFeatureId = track.featPerView.at(pair.reference).featureId;
         const IndexT nextfeatureId = track.featPerView.at(pair.next).featureId;
-        const Vec2 refpt = refFeatures[refFeatureId].coords().cast<double>();
-        const Vec2 nextpt = nextfeatures[nextfeatureId].coords().cast<double>();
+        const Vec2 refpt = track.featPerView.at(pair.reference).coords;
+        const Vec2 nextpt = track.featPerView.at(pair.next).coords;
 
         const Vec2 refptu = refIntrinsics->get_ud_pixel(refpt);
         const Vec2 nextptu = nextIntrinsics->get_ud_pixel(nextpt);
@@ -126,20 +122,14 @@ bool estimatePairAngle(const sfmData::SfMData & sfmData, const sfm::Reconstructe
     return true;
 }
 
-double computeScore(const feature::FeaturesPerView & featuresPerView, const track::TracksMap & tracksMap, const std::vector<IndexT> & usedTracks, const IndexT viewId, const size_t maxLevel)
+double computeScore(const track::TracksMap & tracksMap, const std::vector<IndexT> & usedTracks, const IndexT viewId, const size_t maxLevel)
 {
-    const feature::MapFeaturesPerDesc& featuresPerDesc = featuresPerView.getFeaturesPerDesc(viewId);
-
     std::vector<std::set<std::pair<unsigned int, unsigned int>>> uniques(maxLevel - 1);
 
     for (auto trackId : usedTracks)
     {
         auto & track = tracksMap.at(trackId);
-
-        const feature::PointFeatures& features = featuresPerDesc.at(track.descType);
-        
-        const IndexT featureId = track.featPerView.at(viewId).featureId;
-        const Vec2 pt = features[featureId].coords().cast<double>();
+        const Vec2 pt = track.featPerView.at(viewId).coords;
 
         unsigned int ptx = (unsigned int)(pt.x());
         unsigned int pty = (unsigned int)(pt.y());
@@ -170,7 +160,7 @@ double computeScore(const feature::FeaturesPerView & featuresPerView, const trac
 }
 
 
-bool buildSfmData(sfmData::SfMData & sfmData, const sfm::ReconstructedPair & pair, const track::TracksMap& tracksMap, const feature::FeaturesPerView & featuresPerView, const std::vector<IndexT> & usedTracks)
+bool buildSfmData(sfmData::SfMData & sfmData, const sfm::ReconstructedPair & pair, const track::TracksMap& tracksMap, const std::vector<IndexT> & usedTracks)
 {
     const sfmData::View& refView = sfmData.getView(pair.reference);
     const sfmData::View& nextView = sfmData.getView(pair.next);
@@ -184,9 +174,6 @@ bool buildSfmData(sfmData::SfMData & sfmData, const sfm::ReconstructedPair & pai
     {
         return false;
     }
-    
-    const feature::MapFeaturesPerDesc& refFeaturesPerDesc = featuresPerView.getFeaturesPerDesc(pair.reference);
-    const feature::MapFeaturesPerDesc& nextFeaturesPerDesc = featuresPerView.getFeaturesPerDesc(pair.next);
 
     const Eigen::Matrix3d Kref = refPinhole->K();
     const Eigen::Matrix3d Knext = nextPinhole->K();
@@ -208,12 +195,11 @@ bool buildSfmData(sfmData::SfMData & sfmData, const sfm::ReconstructedPair & pai
     {
         const track::Track& track = tracksMap.at(trackId);
 
-        const feature::PointFeatures& refFeatures = refFeaturesPerDesc.at(track.descType);
-        const feature::PointFeatures& nextFeatures = nextFeaturesPerDesc.at(track.descType);
-        const IndexT refFeatureId = track.featPerView.at(pair.reference).featureId;
-        const IndexT nextFeatureId = track.featPerView.at(pair.next).featureId;
-        const Vec2 refpt = refFeatures[refFeatureId].coords().cast<double>();
-        const Vec2 nextpt = nextFeatures[nextFeatureId].coords().cast<double>();
+        const track::TrackItem & refItem = track.featPerView.at(pair.reference);
+        const track::TrackItem & nextItem = track.featPerView.at(pair.next);
+
+        const Vec2 refpt = refItem.coords;
+        const Vec2 nextpt = nextItem.coords;
 
         const Vec2 refptu = refIntrinsics->get_ud_pixel(refpt);
         const Vec2 nextptu = nextIntrinsics->get_ud_pixel(nextpt);
@@ -254,14 +240,10 @@ int aliceVision_main(int argc, char** argv)
     // command-line parameters
     std::string sfmDataFilename;
     std::string sfmDataOutputFilename;
-    std::vector<std::string> featuresFolders;
     std::string tracksFilename;
     std::string pairsDirectory;
 
     // user optional parameters
-    std::string describerTypesName = feature::EImageDescriberType_enumToString(feature::EImageDescriberType::SIFT);
-    std::pair<std::string, std::string> initialPairString("", "");
-
     const double maxEpipolarDistance = 4.0;
     const double minAngle = 5.0;
 
@@ -272,9 +254,7 @@ int aliceVision_main(int argc, char** argv)
     ("input,i", po::value<std::string>(&sfmDataFilename)->required(), "SfMData file.")
     ("output,o", po::value<std::string>(&sfmDataOutputFilename)->required(), "SfMData output file.")
     ("tracksFilename,t", po::value<std::string>(&tracksFilename)->required(), "Tracks file.")
-    ("pairs,p", po::value<std::string>(&pairsDirectory)->required(), "Path to the pairs directory.")
-    ("featuresFolders,f", po::value<std::vector<std::string>>(&featuresFolders)->multitoken(), "Path to folder(s) containing the extracted features.")
-    ("describerTypes,d", po::value<std::string>(&describerTypesName)->default_value(describerTypesName),feature::EImageDescriberType_informations().c_str());
+    ("pairs,p", po::value<std::string>(&pairsDirectory)->required(), "Path to the pairs directory.");
 
     CmdLine cmdline("AliceVision SfM Bootstraping");
 
@@ -303,20 +283,6 @@ int aliceVision_main(int argc, char** argv)
         return EXIT_SUCCESS;
     }
 
-
-    // get imageDescriber type
-    const std::vector<feature::EImageDescriberType> describerTypes =
-        feature::EImageDescriberType_stringToEnums(describerTypesName);
-        
-
-    // features reading
-    feature::FeaturesPerView featuresPerView;
-    ALICEVISION_LOG_INFO("Load features");
-    if(!sfm::loadFeaturesPerView(featuresPerView, sfmData, featuresFolders, describerTypes))
-    {
-        ALICEVISION_LOG_ERROR("Invalid features.");
-        return EXIT_FAILURE;
-    }
 
     // Load tracks
     ALICEVISION_LOG_INFO("Load tracks");
@@ -376,7 +342,7 @@ int aliceVision_main(int argc, char** argv)
     {
         std::vector<IndexT> usedTracks;
         double angle = 0.0;
-        if (!estimatePairAngle(sfmData, pair, mapTracks, mapTracksPerView, featuresPerView, maxEpipolarDistance, angle, usedTracks))
+        if (!estimatePairAngle(sfmData, pair, mapTracks, mapTracksPerView, maxEpipolarDistance, angle, usedTracks))
         {
             continue;
         }
@@ -386,8 +352,8 @@ int aliceVision_main(int argc, char** argv)
             continue;
         }
 
-        double refScore = computeScore(featuresPerView, mapTracks, usedTracks, pair.reference, 16);
-        double nextScore = computeScore(featuresPerView, mapTracks, usedTracks, pair.next, 16);
+        double refScore = computeScore(mapTracks, usedTracks, pair.reference, 16);
+        double nextScore = computeScore(mapTracks, usedTracks, pair.next, 16);
 
         double score = std::min(refScore, nextScore) * radianToDegree(angle);
 
@@ -399,7 +365,7 @@ int aliceVision_main(int argc, char** argv)
         }
     }
 
-    if (!buildSfmData(sfmData, bestPair, mapTracks, featuresPerView, bestUsedTracks))
+    if (!buildSfmData(sfmData, bestPair, mapTracks, bestUsedTracks))
     {
         return EXIT_FAILURE;
     }

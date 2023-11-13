@@ -25,7 +25,7 @@ aliceVision::track::TrackItem tag_invoke(boost::json::value_to_tag<aliceVision::
     aliceVision::track::TrackItem ret;
     ret.featureId = boost::json::value_to<std::size_t>(obj.at("featureId"));
     ret.coords = boost::json::value_to<Vec2>(obj.at("coords"));
-    ret.scale = boost::json::value_to<std::size_t>(obj.at("scale"));
+    ret.scale = boost::json::value_to<double>(obj.at("scale"));
 
     return ret;
 }

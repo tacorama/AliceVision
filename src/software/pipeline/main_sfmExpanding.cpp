@@ -47,7 +47,6 @@ int aliceVision_main(int argc, char** argv)
     // command-line parameters
     std::string sfmDataFilename;
     std::string sfmDataOutputFilename;
-    std::vector<std::string> featuresFolders;
     std::string tracksFilename;
     std::string pairsDirectory;
 
@@ -65,9 +64,7 @@ int aliceVision_main(int argc, char** argv)
     ("input,i", po::value<std::string>(&sfmDataFilename)->required(), "SfMData file.")
     ("output,o", po::value<std::string>(&sfmDataOutputFilename)->required(), "SfMData output file.")
     ("tracksFilename,t", po::value<std::string>(&tracksFilename)->required(), "Tracks file.")
-    ("pairs,p", po::value<std::string>(&pairsDirectory)->required(), "Path to the pairs directory.")
-    ("featuresFolders,f", po::value<std::vector<std::string>>(&featuresFolders)->multitoken(), "Path to folder(s) containing the extracted features.")
-    ("describerTypes,d", po::value<std::string>(&describerTypesName)->default_value(describerTypesName),feature::EImageDescriberType_informations().c_str());
+    ("pairs,p", po::value<std::string>(&pairsDirectory)->required(), "Path to the pairs directory.");
 
     CmdLine cmdline("AliceVision SfM Bootstraping");
 
@@ -89,19 +86,6 @@ int aliceVision_main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    // get imageDescriber type
-    const std::vector<feature::EImageDescriberType> describerTypes =
-        feature::EImageDescriberType_stringToEnums(describerTypesName);
-        
-
-    // features reading
-    feature::FeaturesPerView featuresPerView;
-    ALICEVISION_LOG_INFO("Load features");
-    if(!sfm::loadFeaturesPerView(featuresPerView, sfmData, featuresFolders, describerTypes))
-    {
-        ALICEVISION_LOG_ERROR("Invalid features.");
-        return EXIT_FAILURE;
-    }
 
     // Load tracks
     ALICEVISION_LOG_INFO("Load tracks");
