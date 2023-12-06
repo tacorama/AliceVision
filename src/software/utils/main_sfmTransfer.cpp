@@ -294,7 +294,7 @@ int aliceVision_main(int argc, char **argv)
                             commonViewsMap.emplace(viewPair.second, viewPair.first);
                         }
 
-                        HashMap<IndexT, aliceVision::sfmData::Landmark> newLandmarks;
+                        aliceVision::sfmData::Landmarks & newLandmarks = sfmData.getLandmarks();
                         for (const auto& landIt : refLandmarks)
                         {
                             // Copy of the current landmark :
@@ -320,7 +320,6 @@ int aliceVision_main(int argc, char **argv)
                                 newLandmarks.emplace(landIt.first,newLandmark);
                             }
                         }
-                        sfmData.getLandmarks() = newLandmarks;
                     }
                 }
             }

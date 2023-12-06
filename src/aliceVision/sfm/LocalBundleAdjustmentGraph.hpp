@@ -9,7 +9,7 @@
 #include <aliceVision/types.hpp>
 #include <aliceVision/track/TracksBuilder.hpp>
 #include <aliceVision/sfm/bundle/BundleAdjustment.hpp>
-
+#include <aliceVision/sfm/pipeline/expanding/LbaPolicy.hpp>
 #include <lemon/list_graph.h>
 
 namespace aliceVision {
@@ -24,7 +24,7 @@ namespace sfm {
  * @brief The LocalBundleAdjustmentGraph class
  * Contains all the data needed to apply a Local Bundle Adjustment.
  */
-class LocalBundleAdjustmentGraph
+class LocalBundleAdjustmentGraph 
 {
   public:
     explicit LocalBundleAdjustmentGraph(const sfmData::SfMData& sfmData);
@@ -200,6 +200,12 @@ class LocalBundleAdjustmentGraph
      */
     unsigned int countEdges() const;
 
+    /**
+     * @brief Remove all the edges added by the \c addIntrinsicEdgesToTheGraph function related to .
+     * @param[in] intrinsicId
+     */
+    void removeIntrinsicEdgesFromTheGraph(IndexT intrinsicId);
+
   private:
     /**
      * @brief Return the distance between a specific pose and the new posed views.
@@ -284,12 +290,6 @@ class LocalBundleAdjustmentGraph
      * @return
      */
     std::size_t addIntrinsicEdgesToTheGraph(const sfmData::SfMData& sfmData, const std::set<IndexT>& newReconstructedViews);
-
-    /**
-     * @brief Remove all the edges added by the \c addIntrinsicEdgesToTheGraph function related to .
-     * @param[in] intrinsicId
-     */
-    void removeIntrinsicEdgesFromTheGraph(IndexT intrinsicId);
 
     // Distances data
     // - Local BA needs to know the distance of all the old posed views to the new resected views.

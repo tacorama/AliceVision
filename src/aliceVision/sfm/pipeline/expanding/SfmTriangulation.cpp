@@ -16,6 +16,8 @@
 #include <aliceVision/robustEstimation/ISolver.hpp>
 #include <aliceVision/robustEstimation/IRansacKernel.hpp>
 
+#include <aliceVision/camera/camera.hpp>
+
 namespace aliceVision {
 namespace sfm {
 
@@ -226,11 +228,11 @@ private:
   multiview::TriangulateNViewsSphericalSolver _solver;
 };
 
+
 bool SfmTriangulation::process(
             const sfmData::SfMData & sfmData,
             const track::TracksMap & tracks,
             const track::TracksPerView & tracksPerView, 
-            const feature::FeaturesPerView & featuresPerView,
             std::mt19937 &randomNumberGenerator,
             const std::set<IndexT> &viewIds,
             std::set<IndexT> & evaluatedTracks,
@@ -238,10 +240,14 @@ bool SfmTriangulation::process(
         )
 {
     evaluatedTracks.clear();
+    outputLandmarks.clear();
 
     // Get all tracks id which are visible in views
     std::set<IndexT> viewTracks;
     track::getTracksInImagesFast(viewIds, tracksPerView, viewTracks);
+
+    std::vector<IndexT> viewTracksVector;
+    std::copy(viewTracks.begin(), viewTracks.end(), std::back_inserter(viewTracksVector));
 
     const std::set<IndexT>& validViews = sfmData.getValidViews();
 
@@ -250,13 +256,11 @@ bool SfmTriangulation::process(
     allInterestingViews.insert(viewIds.begin(), viewIds.end());
     allInterestingViews.insert(validViews.begin(), validViews.end());
 
-//#pragma omp parallel for
-    for(int pos = 0; pos < viewTracks.size(); pos++)
-    {
-        std::set<IndexT>::const_iterator it = viewTracks.begin();
-        std::advance(it, pos);
 
-        const std::size_t trackId = *it;
+    #pragma omp parallel for
+    for(int pos = 0; pos < viewTracksVector.size(); pos++)
+    {
+        const std::size_t trackId = viewTracksVector[pos];
         const track::Track& track = tracks.at(trackId);
 
         // Get all views observing the current track (Keeping their Id)
@@ -269,18 +273,20 @@ bool SfmTriangulation::process(
         std::set_intersection(trackViews.begin(), trackViews.end(), 
                             allInterestingViews.begin(), allInterestingViews.end(), 
                             std::inserter(trackViewsFiltered, trackViewsFiltered.begin()));
-
+    
         if(trackViewsFiltered.size() < _minObservations)
         {
             continue;
         }
 
-        evaluatedTracks.insert(trackId);
-
-        
+        #pragma omp critical
+        {
+            
+            evaluatedTracks.insert(trackId);
+        }
 
         sfmData::Landmark result;
-        if (!processTrack(sfmData, track, featuresPerView, randomNumberGenerator, trackViewsFiltered, result))
+        if (!processTrack(sfmData, track, randomNumberGenerator, trackViewsFiltered, result))
         {
             continue;
         }
@@ -297,7 +303,6 @@ bool SfmTriangulation::process(
 bool SfmTriangulation::processTrack(
             const sfmData::SfMData & sfmData,
             const track::Track & track,
-            const feature::FeaturesPerView & featuresPerView,
             std::mt19937 &randomNumberGenerator,
             const std::set<IndexT> & viewIds,
             sfmData::Landmark & result
@@ -317,13 +322,10 @@ bool SfmTriangulation::processTrack(
         const std::shared_ptr<camera::IntrinsicBase> intrinsic = sfmData.getIntrinsicsharedPtr(view.getIntrinsicId());
         const Eigen::Matrix4d pose = sfmData.getPose(view).getTransform().getHomogeneous();
 
-        std::size_t featureId = track.featPerView.at(viewId).featureId;
-        const auto & viewFeatures = featuresPerView.getFeaturesPerDesc(viewId);
-        const auto & viewFeaturesDesc = viewFeatures.at(descType);
-        const auto & pt = viewFeaturesDesc[featureId];
+        const auto  & trackItem = track.featPerView.at(viewId);
 
         //Lift the coordinates to metric unit sphere
-        const Vec2 coords = pt.coords().cast<double>();
+        const Vec2 coords = trackItem.coords;
 
         observations.push_back(coords);
         intrinsics.push_back(intrinsic);
@@ -339,7 +341,14 @@ bool SfmTriangulation::processTrack(
     robustEstimation::ScoreEvaluator<TriangulationSphericalKernel> scorer(8.0);
     TriangulationSphericalKernel kernel(observations, poses, intrinsics);
 
-    model = robustEstimation::LO_RANSAC(kernel, scorer, randomNumberGenerator, &inliers);
+    if (observations.size() <= 0)
+    {
+    }
+    else 
+    {
+        model = robustEstimation::LO_RANSAC(kernel, scorer, randomNumberGenerator, &inliers);
+    }
+    
     Vec4 X = model.getMatrix();
 
     Vec3 X_euclidean;
@@ -355,19 +364,67 @@ bool SfmTriangulation::processTrack(
         IndexT viewId = indexedViewIds[i];
         
         sfmData::Observation & o = result.observations[viewId];
-        
-        //Retrieve observation data
-        std::size_t featureId = track.featPerView.at(viewId).featureId;
-        const auto & viewFeatures = featuresPerView.getFeaturesPerDesc(viewId);
-        const auto & viewFeaturesDesc = viewFeatures.at(descType);
-        const auto & pt = viewFeaturesDesc[featureId];
 
-        o.id_feat = featureId;
-        o.scale = pt.scale();
-        o.x = pt.coords().cast<double>();
+        //Retrieve observation data
+        const auto  & trackItem = track.featPerView.at(viewId);
+
+        o.id_feat = trackItem.featureId;
+        o.scale = trackItem.scale;
+        o.x = trackItem.coords;
     }
 
     return true;
+}
+
+bool SfmTriangulation::checkChierality(const sfmData::SfMData & sfmData, const sfmData::Landmark & landmark)
+{
+    for (const auto & pRefObs : landmark.observations)
+    {
+        IndexT refViewId = pRefObs.first;
+
+        const sfmData::View & refView = sfmData.getView(refViewId);
+        const sfmData::CameraPose & refCameraPose = sfmData.getPoses().at(refView.getPoseId());
+        const geometry::Pose3 & refPose = refCameraPose.getTransform();
+
+        if (refPose.depth(landmark.X) < 0.0)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+double SfmTriangulation::getMaximalAngle(const sfmData::SfMData & sfmData, const sfmData::Landmark & landmark)
+{
+    double max = 0.0;
+
+    for (const auto & pRefObs : landmark.observations)
+    {
+        IndexT refViewId = pRefObs.first;
+
+        const sfmData::View & refView = sfmData.getView(refViewId);
+        const sfmData::CameraPose & refCameraPose = sfmData.getPoses().at(refView.getPoseId());
+        const geometry::Pose3 & refPose = refCameraPose.getTransform();
+
+        for (const auto & pNextObs : landmark.observations)
+        {
+            IndexT nextViewId = pNextObs.first;
+            if (refViewId > nextViewId)
+            {
+                continue;
+            }
+
+            const sfmData::View & nextView = sfmData.getView(nextViewId);
+            const sfmData::CameraPose & nextCameraPose = sfmData.getPoses().at(nextView.getPoseId());
+            const geometry::Pose3 & nextPose = nextCameraPose.getTransform();
+            double angle_deg = camera::angleBetweenRays(refPose, nextPose, landmark.X);
+
+            max = std::max(max, angle_deg);
+        }
+    }
+
+    return max;
 }
 
 } // namespace sfm

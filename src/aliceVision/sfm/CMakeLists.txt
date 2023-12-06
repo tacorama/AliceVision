@@ -8,9 +8,18 @@ set(sfm_files_headers
   pipeline/global/TranslationTripletKernelACRansac.hpp
   pipeline/localization/SfMLocalizer.hpp
   pipeline/sequential/ReconstructionEngine_sequentialSfM.hpp
+  pipeline/expanding/SfmBundle.hpp
   pipeline/expanding/SfmResection.hpp
   pipeline/expanding/SfmTriangulation.hpp
   pipeline/expanding/ExpansionProcess.hpp
+  pipeline/expanding/ExpansionChunk.hpp
+  pipeline/expanding/ExpansionHistory.hpp
+  pipeline/expanding/ExpansionIteration.hpp
+  pipeline/expanding/ExpansionPolicy.hpp
+  pipeline/expanding/ExpansionPolicyLegacy.hpp
+  pipeline/expanding/LbaPolicy.hpp
+  pipeline/expanding/LbaPolicyConnexity.hpp
+  pipeline/expanding/ConnexityGraph.hpp
   pipeline/ReconstructionEngine.hpp
   pipeline/RigSequence.hpp
   pipeline/pairwiseMatchesIO.hpp
@@ -43,9 +52,16 @@ set(sfm_files_sources
   pipeline/global/ReconstructionEngine_globalSfM.cpp
   pipeline/localization/SfMLocalizer.cpp
   pipeline/sequential/ReconstructionEngine_sequentialSfM.cpp
+  pipeline/expanding/SfmBundle.cpp
   pipeline/expanding/SfmResection.cpp
   pipeline/expanding/SfmTriangulation.cpp
   pipeline/expanding/ExpansionProcess.cpp
+  pipeline/expanding/ExpansionChunk.cpp
+  pipeline/expanding/ExpansionHistory.cpp
+  pipeline/expanding/ExpansionIteration.cpp
+  pipeline/expanding/ExpansionPolicyLegacy.cpp
+  pipeline/expanding/LbaPolicyConnexity.cpp
+  pipeline/expanding/ConnexityGraph.cpp
   pipeline/ReconstructionEngine.cpp
   pipeline/RigSequence.cpp
   pipeline/RelativePoseInfo.cpp

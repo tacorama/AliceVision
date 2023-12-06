@@ -33,8 +33,9 @@ public:
     {
         for (const auto & pt : _observations)
         {
-            _liftedObservations.push_back(_camera->toUnitSphere(_camera->cam2ima(_camera->removeDistortion(pt))));
+            _liftedObservations.push_back(_camera->toUnitSphere(_camera->removeDistortion(_camera->ima2cam(pt))));
         }
+        
     }
 
     /**
@@ -79,7 +80,7 @@ public:
      */
     double logalpha0() const
     {
-        return log10(M_PI);
+        return log10(M_PI / (_camera->w() * _camera->h()));
     }
 
     double errorVectorDimension() const
@@ -119,10 +120,10 @@ public:
     {
         for (int idx = 0; idx < _structure.size(); idx++)
         {
-            const Vec4 & X = _structure[idx].homogeneous();
-            const Vec2 & x = _observations[idx];
+            const Vec4 X = _structure[idx].homogeneous();
+            const Vec2 x = _observations[idx];
 
-            const Vec2 residual = _camera->residual(model, X, x);
+            const Vec2 residual = _camera->residual(geometry::Pose3(model), X, x);
 
             errors[idx] = residual.norm();
         }
@@ -140,17 +141,15 @@ bool SfmResection::processView(
                         const sfmData::SfMData & sfmData,
                         const track::TracksMap & tracks,
                         const track::TracksPerView & tracksPerView, 
-                        const feature::FeaturesPerView & featuresPerView,
                         std::mt19937 &randomNumberGenerator,
                         const IndexT viewId,
-
                         Eigen::Matrix4d & updatedPose,
                         double & updatedThreshold
                         )
 {
     // A. Compute 2D/3D matches
     // A1. list tracks ids used by the view
-    const aliceVision::track::TrackIdSet& set_tracksIds = tracksPerView.at(viewId);
+    const aliceVision::track::TrackIdSet & viewTracksIds = tracksPerView.at(viewId);
 
     // A2. Each landmark's id is equal to the associated track id
     // Get list of landmarks = get list of reconstructed tracks
@@ -161,44 +160,35 @@ bool SfmResection::processView(
 
     // Remove all reconstructed tracks which were not observed in the view to resect.
     // --> Intersection of tracks observed in this view and tracks reconstructed.
-    std::set<std::size_t> tracksId;
-    std::set_intersection(tracksId.begin(), tracksId.end(),
+    std::set<std::size_t> trackIds;
+    std::set_intersection(viewTracksIds.begin(), viewTracksIds.end(),
                         reconstructedTrackId.begin(),
                         reconstructedTrackId.end(),
-                        std::inserter(tracksId, tracksId.begin()));
+                        std::inserter(trackIds, trackIds.begin()));
 
-
-    if (tracksId.size() < 3)
+    if (trackIds.size() < 3)
     {
         // If less than 3 points, the resection is theorically impossible.
         // Let ignore this view.
         return false;
     }
 
-    // Associate feature id to each track
-    // Feature id is the id of the observation of this track in the current view
-    std::vector<track::FeatureId> featuresId;
-    track::getFeatureIdInViewPerTrack(tracks, tracksId, viewId, featuresId);
-
 
     //Get information about this view
     const std::shared_ptr<sfmData::View> view = sfmData.getViews().at(viewId);
     std::shared_ptr<camera::IntrinsicBase> intrinsic = sfmData.getIntrinsicsharedPtr(view->getIntrinsicId());
 
-    //Loop over features and tracks to build data needed by resection process
+    //Loop over tracks to build data needed by resection process
     std::vector<Eigen::Vector3d> structure;
     std::vector<Eigen::Vector2d> observations;
     std::vector<feature::EImageDescriberType> featureTypes;
-    auto itFeatures = featuresId.begin();
-    auto itTracks = tracksId.begin();
-    for (; itFeatures != featuresId.end() && itTracks != tracksId.end(); itFeatures++, itTracks++)
+    for (const auto & trackId : trackIds)
     {
-        const feature::EImageDescriberType descType = itFeatures->first;
-        const std::size_t trackId = *itTracks;
-        const IndexT featureId = itFeatures->second;
-        
+        const auto & track = tracks.at(trackId);
+
+        const feature::EImageDescriberType descType = track.descType;        
         const Eigen::Vector3d X = sfmData.getLandmarks().at(trackId).X;
-        const Eigen::Vector2d x = featuresPerView.getFeatures(viewId, descType)[featureId].coords().cast<double>();
+        const Eigen::Vector2d x = track.featPerView.at(viewId).coords;
 
         structure.push_back(X);
         observations.push_back(x);

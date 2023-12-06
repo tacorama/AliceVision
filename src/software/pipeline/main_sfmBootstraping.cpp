@@ -24,6 +24,7 @@
 
 #include <aliceVision/track/tracksUtils.hpp>
 #include <aliceVision/track/trackIO.hpp>
+#include <aliceVision/sfm/pipeline/expanding/ExpansionPolicyLegacy.hpp>
 
 #include <aliceVision/dataio/json.hpp>
 
@@ -43,7 +44,7 @@ using namespace aliceVision;
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
 
-bool estimatePairAngle(const sfmData::SfMData & sfmData, const sfm::ReconstructedPair & pair, const track::TracksMap& tracksMap, const track::TracksPerView & tracksPerView, const double maxDistance, double & resultAngle, std::vector<IndexT> & usedTracks)
+bool estimatePairAngle(const sfmData::SfMData & sfmData, const sfm::ReconstructedPair & pair, const track::TracksMap& tracksMap, const track::TracksPerView & tracksPerView, const double maxDistance, double & resultAngle, std::vector<size_t> & usedTracks)
 {
     usedTracks.clear();
 
@@ -122,45 +123,8 @@ bool estimatePairAngle(const sfmData::SfMData & sfmData, const sfm::Reconstructe
     return true;
 }
 
-double computeScore(const track::TracksMap & tracksMap, const std::vector<IndexT> & usedTracks, const IndexT viewId, const size_t maxLevel)
-{
-    std::vector<std::set<std::pair<unsigned int, unsigned int>>> uniques(maxLevel - 1);
 
-    for (auto trackId : usedTracks)
-    {
-        auto & track = tracksMap.at(trackId);
-        const Vec2 pt = track.featPerView.at(viewId).coords;
-
-        unsigned int ptx = (unsigned int)(pt.x());
-        unsigned int pty = (unsigned int)(pt.y());
-
-        for (unsigned int shift = 1; shift < maxLevel; shift++)
-        {
-            unsigned int lptx = ptx >> shift;
-            unsigned int lpty = pty >> shift;
-
-            uniques[shift - 1].insert(std::make_pair(lptx, lpty));
-        }
-    } 
-
-    double sum = 0.0;
-    for (unsigned int shift = 1; shift < maxLevel; shift++)
-    {
-        int size = uniques[shift - 1].size();
-        if (size <= 1)
-        {
-            continue;
-        }
-
-        double w = pow(2.0, maxLevel - shift);
-        sum += w * double(size);
-    }
-
-    return sum;
-}
-
-
-bool buildSfmData(sfmData::SfMData & sfmData, const sfm::ReconstructedPair & pair, const track::TracksMap& tracksMap, const std::vector<IndexT> & usedTracks)
+bool buildSfmData(sfmData::SfMData & sfmData, const sfm::ReconstructedPair & pair, const track::TracksMap& tracksMap, const std::vector<std::size_t> & usedTracks)
 {
     const sfmData::View& refView = sfmData.getView(pair.reference);
     const sfmData::View& nextView = sfmData.getView(pair.next);
@@ -336,11 +300,11 @@ int aliceVision_main(int argc, char** argv)
 
     double bestScore = 0.0;
     sfm::ReconstructedPair bestPair;
-    std::vector<IndexT> bestUsedTracks;
+    std::vector<std::size_t> bestUsedTracks;
 
     for (const sfm::ReconstructedPair & pair: reconstructedPairs)
     {
-        std::vector<IndexT> usedTracks;
+        std::vector<std::size_t> usedTracks;
         double angle = 0.0;
         if (!estimatePairAngle(sfmData, pair, mapTracks, mapTracksPerView, maxEpipolarDistance, angle, usedTracks))
         {
@@ -352,8 +316,14 @@ int aliceVision_main(int argc, char** argv)
             continue;
         }
 
-        double refScore = computeScore(mapTracks, usedTracks, pair.reference, 16);
-        double nextScore = computeScore(mapTracks, usedTracks, pair.next, 16);
+        const sfmData::View & vref = sfmData.getView(pair.reference);
+        const sfmData::View & vnext = sfmData.getView(pair.next);
+
+        int maxref = std::max(vref.getImage().getWidth(), vref.getImage().getHeight());
+        int maxnext = std::max(vnext.getImage().getWidth(), vnext.getImage().getHeight());
+
+        double refScore = sfm::ExpansionPolicyLegacy::computeScore(mapTracks, usedTracks, pair.reference, maxref, 5);
+        double nextScore = sfm::ExpansionPolicyLegacy::computeScore(mapTracks, usedTracks, pair.next, maxnext, 5);
 
         double score = std::min(refScore, nextScore) * radianToDegree(angle);
 

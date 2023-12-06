@@ -16,6 +16,16 @@ class TracksHandler
 public:
     bool load(const std::string & pathJson, const std::set<IndexT> & viewIds);
 
+    const track::TracksMap & getAllTracks() const
+    {
+        return _mapTracks;
+    }
+
+    const track::TracksPerView & getTracksPerView() const
+    {
+        return _mapTracksPerView;
+    }
+
 private:
     track::TracksPerView _mapTracksPerView;
     track::TracksMap _mapTracks;

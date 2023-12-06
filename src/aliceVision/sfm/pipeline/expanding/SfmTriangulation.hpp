@@ -27,18 +27,19 @@ public:
             const sfmData::SfMData & sfmData,
             const track::TracksMap & tracks,
             const track::TracksPerView & tracksPerView, 
-            const feature::FeaturesPerView & featuresPerView,
             std::mt19937 &randomNumberGenerator,
             const std::set<IndexT> & viewIds,
             std::set<IndexT> & evaluatedTracks,
             std::map<IndexT, sfmData::Landmark> & outputLandmarks
         );
 
+    static bool checkChierality(const sfmData::SfMData & sfmData, const sfmData::Landmark & landmark);
+    static double getMaximalAngle(const sfmData::SfMData & sfmData, const sfmData::Landmark & landmark);
+
 private:
     bool processTrack(
             const sfmData::SfMData & sfmData,
             const track::Track & track,
-            const feature::FeaturesPerView & featuresPerView,
             std::mt19937 &randomNumberGenerator,
             const std::set<IndexT> & viewIds,
             sfmData::Landmark & result

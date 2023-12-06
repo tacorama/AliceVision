@@ -6,40 +6,77 @@
 
 #include "ExpansionProcess.hpp"
 
-#include <aliceVision/sfm/pipeline/expanding/SfmTriangulation.hpp>
 
 namespace aliceVision {
 namespace sfm {
 
-bool ExpansionProcess::process(sfmData::SfMData & sfmData, const track::TracksMap& tracks)
+ExpansionProcess::ExpansionProcess() :
+    _historyHandler(std::make_shared<ExpansionHistory>()),
+    _iterationHandler(std::make_unique<ExpansionIteration>(_historyHandler))
 {
+
+}
+
+bool ExpansionProcess::process(sfmData::SfMData & sfmData, track::TracksHandler & tracksHandler)
+{
+    if (!_iterationHandler)
+    {
+        return false;
+    }
+
+    if (!_historyHandler)
+    {
+        return false;
+    }
+
+    if (!_historyHandler->initialize(sfmData))
+    {
+        return false;
+    }
+
     //Prepare existing data
-    prepareExisting(sfmData, tracks);
+    prepareExisting(sfmData, tracksHandler);
+
+    int nbPoses = 0;
+    do
+    {
+        nbPoses = sfmData.getPoses().size();
+
+        if (!_iterationHandler->process(sfmData, tracksHandler))
+        {
+            return false;
+        }
+    }
+    while (sfmData.getPoses().size() != nbPoses);
 
     return true;
 }
 
-void ExpansionProcess::prepareExisting(sfmData::SfMData & sfmData, const track::TracksMap& tracks)
+bool ExpansionProcess::prepareExisting(sfmData::SfMData & sfmData, const track::TracksHandler & tracksHandler)
 {
     //Prepare existing data
-    remapExistingLandmarks(sfmData, tracks);
+    remapExistingLandmarks(sfmData, tracksHandler);
 
     // If there are some poses existing
     // We want to make sure everything is on par with requirements
-    if (sfmData.getPoses().empty() == false)
-    {
-        upgradeSfm(sfmData, tracks);
+    if (!sfmData.getPoses().empty())
+    {   
+        if (_iterationHandler->getChunkHandler() == nullptr)
+        {
+            return false;
+        }
+
+        // Process everything in existing sfmData
+        if (!_iterationHandler->getChunkHandler()->process(sfmData, tracksHandler, sfmData.getValidViews()))
+        {
+            return false;
+        }
     }
 
+    return true;
 }
 
-void ExpansionProcess::upgradeSfm(sfmData::SfMData & sfmData, const track::TracksMap& tracks)
-{
-    SfmTriangulation triangulation(_minTriangulationObservations);
-    
-}
-
-void ExpansionProcess::remapExistingLandmarks(sfmData::SfMData & sfmData, const track::TracksMap& tracks)
+void ExpansionProcess::remapExistingLandmarks(sfmData::SfMData & sfmData, const track::TracksHandler & tracksHandler)
 {
     // get unmap landmarks
     sfmData::Landmarks landmarks;
@@ -71,7 +108,7 @@ void ExpansionProcess::remapExistingLandmarks(sfmData::SfMData & sfmData, const 
 
 
     // For each track
-    for (const auto & trackPair : tracks)
+    for (const auto & trackPair : tracksHandler.getAllTracks())
     {
         const IndexT trackId = trackPair.first;
         const track::Track& track = trackPair.second;

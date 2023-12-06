@@ -7,44 +7,63 @@
 #pragma once
 
 #include <aliceVision/types.hpp>
-#include <aliceVision/track/Track.hpp>
+#include <aliceVision/track/TracksHandler.hpp>
 #include <aliceVision/sfmData/SfMData.hpp>
 #include <aliceVision/feature/FeaturesPerView.hpp>
+#include <aliceVision/sfm/pipeline/expanding/ExpansionIteration.hpp>
+#include <aliceVision/sfm/pipeline/expanding/ExpansionHistory.hpp>
 
 namespace aliceVision {
 namespace sfm {
 
 class ExpansionProcess{
 public:
-    bool process(sfmData::SfMData & sfmData, 
-                const track::TracksMap& tracks);
+    /**
+     * Default constructor
+    */
+    ExpansionProcess();
+
+    /**
+     * @brief Process a scene, potentially handling multiple groups
+     * @param sfmData the in/out scene to process
+     * @param tracksHandler the tracks for this scene
+    */
+    bool process(sfmData::SfMData & sfmData, track::TracksHandler & tracksHandler);
+
+    /**
+     * @brief Return iteration handler pointer
+     * @return a pointer to the unique_ptr iterationhandler
+    */
+    ExpansionIteration * getIterationHandler() const
+    {
+        return _iterationHandler.get();
+    }
 
 private:
 
     /**
      * @brief Process sfmData if something exists inside (previous sfm)
      * @param[in] sfmData the object to update
-     * @param[in] tracks all tracks of the scene as a map {trackId, track}
+     * @param[in] tracks the tracks for this scene
      */
-    void prepareExisting(sfmData::SfMData & sfmData, const track::TracksMap& tracks);
+    bool prepareExisting(sfmData::SfMData & sfmData, const track::TracksHandler & tracksHandler);
 
     /**
      * @brief Remap the sfmData landmarks to id compatible with trackmap
      * @param[in] sfmData the object to update
-     * @param[in] tracks all tracks of the scene as a map {trackId, track}
+     * @param[in] tracks the tracks for this scene
      */
-    void remapExistingLandmarks(sfmData::SfMData & sfmData, const track::TracksMap& tracks);
+    void remapExistingLandmarks(sfmData::SfMData & sfmData, const track::TracksHandler & tracksHandler);
+
+   
+private:
+    //Must be declared first for initialization
+    std::shared_ptr<ExpansionHistory> _historyHandler;
 
     /**
-     * @brief Try to upgrade sfm with new landmarks
-     * @param[in] sfmData the object to update
-     * @param[in] tracks all tracks of the scene as a map {trackId, track}
-     */
-    void upgradeSfm(sfmData::SfMData & sfmData, const track::TracksMap& tracks);
-
-private:
-    
-    const int _minTriangulationObservations = 2;
+     * Handle iteration prcess
+    */
+    std::unique_ptr<ExpansionIteration> _iterationHandler;
 };
 
 } // namespace sfm

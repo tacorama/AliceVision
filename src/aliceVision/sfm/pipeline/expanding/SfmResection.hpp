@@ -9,7 +9,6 @@
 #include <aliceVision/types.hpp>
 #include <aliceVision/track/Track.hpp>
 #include <aliceVision/sfmData/SfMData.hpp>
-#include <aliceVision/feature/FeaturesPerView.hpp>
 
 namespace aliceVision {
 namespace sfm {
@@ -28,7 +27,6 @@ public:
                 const sfmData::SfMData & sfmData,
                 const track::TracksMap & tracks,
                 const track::TracksPerView & map_tracksPerView, 
-                const feature::FeaturesPerView & featuresPerView,
                 std::mt19937 &randomNumberGenerator,
                 const IndexT viewId,
                 Eigen::Matrix4d & updatedPose,

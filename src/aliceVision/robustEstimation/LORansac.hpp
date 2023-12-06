@@ -412,5 +412,132 @@ typename Kernel::ModelT LO_RANSAC(const Kernel& kernel,
     return bestModel;
 }
 
+/**
+ * @brief Implementation of the LORansac framework.
+ *
+ * This implementation follow the Algorithm 1 described in
+ *
+ * Karel Lebeda, Jiri Matas, Ondrej Chum:
+ * Fixing the Locally Optimized RANSAC. BMVC 2012: 1-11
+ *
+ * @tparam Kernel The kernel used in the LORansac estimator which must provide a
+ * minimum solver and a LS solver, the latter used here for the IRLS
+ * @see aliceVision/robustEstimation/LORansacKernel.hpp
+ * @tparam Scorer The scorer used in the LORansac estimator @see ScoreEvaluator
+ *
+ * @param[in] kernel The kernel containing the problem to solve.
+ * @param[in] scorer The scorer used to asses the model quality.
+ * @param[out] best_inliers The indices of the samples supporting the best model.
+ * @param[out] best_score The score of the best model, ie the number of inliers
+ * supporting the best model.
+ * @param[in] bVerbose Enable/Disable log messages
+ * @param[in] max_iterations Maximum number of iterations for the ransac part.
+ * @param[in] outliers_probability The wanted probability of picking outliers.
+ * @return The best model found.
+ */
+template<typename Kernel, typename Scorer>
+typename Kernel::ModelT LO_RANSAC_exhaustive(const Kernel& kernel,
+                                  const Scorer& scorer,
+                                  std::vector<std::size_t>* best_inliers = NULL,
+                                  double* best_score = NULL,
+                                  bool bVerbose = false)
+{
+    const std::size_t min_samples = kernel.getMinimumNbRequiredSamples();
+    const std::size_t total_samples = kernel.nbSamples();
+
+    std::size_t bestNumInliers = 0;
+    double bestScore = std::numeric_limits<double>::max();
+    typename Kernel::ModelT bestModel;
+
+    // Test if we have sufficient points for the kernel.
+    if (total_samples < min_samples)
+    {
+        if (best_inliers)
+        {
+            best_inliers->clear();
+        }
+        return bestModel;
+    }
+
+    // In this robust estimator, the scorer always works on all the data points
+    // at once. So precompute the list ahead of time [0,..,total_samples].
+    std::vector<std::size_t> all_samples(total_samples);
+    std::iota(all_samples.begin(), all_samples.end(), 0);
+
+    std::string bitmask(min_samples, 1);
+    bitmask.resize(total_samples, 0);
+
+    do
+    {
+        std::vector<std::size_t> sample;
+        for (int pos = 0; pos < total_samples; pos++)
+        {
+            if (bitmask[pos] == 1)
+            {
+                sample.push_back(pos);
+            }
+        }
+
+        std::vector<typename Kernel::ModelT> models;
+        kernel.fit(sample, models);
+
+        
+
+        // Compute the inlier list for each fit.
+        for (std::size_t i = 0; i < models.size(); ++i)
+        {
+            std::vector<std::size_t> inliers;
+            double score = scorer.score(kernel, models.at(i), all_samples, inliers);
+
+            if (bestNumInliers < inliers.size())
+            {
+                bestModel = models[i];
+                if (inliers.size() > kernel.getMinimumNbRequiredSamplesLS())
+                {
+                    bestScore = iterativeReweightedLeastSquares(kernel, scorer, models.at(i), inliers);
+                }
+
+                bestNumInliers = inliers.size();
+                if (best_inliers)
+                {
+                    best_inliers->swap(inliers);
+                }
+            }
+            else if (bestNumInliers == inliers.size())
+            {
+                if (inliers.size() > kernel.getMinimumNbRequiredSamplesLS())
+                {
+                    double score = iterativeReweightedLeastSquares(kernel, scorer, models.at(i), inliers);
+                    if (score > bestScore)
+                    {
+                        continue;
+                    }
+                }
+
+                bestModel = models[i];
+                bestNumInliers = inliers.size();
+                if (best_inliers)
+                {
+                    best_inliers->swap(inliers);
+                }
+            }
+        }
+    }
+    while (std::prev_permutation(bitmask.begin(), bitmask.end()));
+
+    if (best_score)
+    {
+        *best_score = bestNumInliers;
+    }
+
+
+    if (bestNumInliers)
+    {
+        kernel.unnormalize(bestModel);
+    }
+
+    return bestModel;
+}
+
 }  // namespace robustEstimation
 }  // namespace aliceVision

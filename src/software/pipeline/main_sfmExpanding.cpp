@@ -23,7 +23,7 @@
 #include <aliceVision/sfmDataIO/sfmDataIO.hpp>
 #include <aliceVision/sfm/pipeline/expanding/ExpansionProcess.hpp>
 
-#include <aliceVision/track/tracksUtils.hpp>
+#include <aliceVision/track/TracksHandler.hpp>
 #include <aliceVision/track/trackIO.hpp>
 
 #include <aliceVision/dataio/json.hpp>
@@ -89,29 +89,19 @@ int aliceVision_main(int argc, char** argv)
 
     // Load tracks
     ALICEVISION_LOG_INFO("Load tracks");
-    std::ifstream tracksFile(tracksFilename);
-    if(tracksFile.is_open() == false)
+    track::TracksHandler tracksHandler;
+    if (!tracksHandler.load(tracksFilename, sfmData.getViewIds()))
     {
-        ALICEVISION_LOG_ERROR("The input tracks file '" + tracksFilename + "' cannot be read.");
         return EXIT_FAILURE;
     }
-    std::stringstream buffer;
-    buffer << tracksFile.rdbuf();
-    boost::json::value jv = boost::json::parse(buffer.str());
-    track::TracksMap mapTracks(track::flat_map_value_to<track::Track>(jv));
-
-    // Compute tracks per view
-    ALICEVISION_LOG_INFO("Estimate tracks per view");
-    track::TracksPerView mapTracksPerView;
-    for(const auto& viewIt : sfmData.getViews())
-    {
-        // create an entry in the map
-        mapTracksPerView[viewIt.first];
-    }
-    track::computeTracksPerView(mapTracks, mapTracksPerView);
   
     sfm::ExpansionProcess ep;
-    ep.process(sfmData, mapTracks);
+    if (!ep.process(sfmData, tracksHandler))
+    {
+        return EXIT_FAILURE;
+    }
+
+    sfmDataIO::Save(sfmData, sfmDataOutputFilename, sfmDataIO::ESfMData::ALL);
 
     return EXIT_SUCCESS;
 }
