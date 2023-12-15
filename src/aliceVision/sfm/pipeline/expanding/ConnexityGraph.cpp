@@ -34,14 +34,14 @@ bool ConnexityGraph::build(const sfmData::SfMData & sfmData, const std::set<Inde
     std::map<IndexT, std::set<IndexT>> landmarksPerView;
     for (const auto & pl : sfmData.getLandmarks())
     {
-        for (const auto & po : pl.second.observations)
+        for (const auto & po : pl.second.getObservations())
         {
             landmarksPerView[po.first].insert(pl.first);
         }
     }
     
     //For all possible unique pairs
-    std::map<IndexT, std::vector<std::pair<IndexT, size_t>>> covisibility;
+    /*std::map<IndexT, std::vector<std::pair<IndexT, size_t>>> covisibility;
     for (int idref = 0; idref < views.size(); idref++)
     {
         IndexT viewRef = views[idref];
@@ -72,7 +72,7 @@ bool ConnexityGraph::build(const sfmData::SfMData & sfmData, const std::set<Inde
     for (const auto & item : covisibility)
     {
 
-    }
+    }*/
 
     /*
     for (const auto & item : covisibility)

@@ -275,7 +275,7 @@ bool SfmResection::internalRefinement(
 
         sfmData::Landmark landmark;
         landmark.X = structure[idx];
-        landmark.observations[0] = sfmData::Observation(observations[idx], UndefinedIndexT, unknownScale);
+        landmark.getObservations()[0] = sfmData::Observation(observations[idx], UndefinedIndexT, unknownScale);
         tinyScene.getLandmarks()[i] = std::move(landmark);
     }
 

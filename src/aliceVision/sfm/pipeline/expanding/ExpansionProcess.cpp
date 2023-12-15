@@ -94,13 +94,13 @@ void ExpansionProcess::remapExistingLandmarks(sfmData::SfMData & sfmData, const 
     for (const auto& landmarkPair : landmarks)
     {
         const IndexT landmarkId = landmarkPair.first;
-        if (landmarkPair.second.observations.size() == 0)
+        if (landmarkPair.second.getObservations().size() == 0)
         {
             continue;
         }
 
-        const IndexT firstViewId = landmarkPair.second.observations.begin()->first;
-        const IndexT firstFeatureId = landmarkPair.second.observations.begin()->second.id_feat;
+        const IndexT firstViewId = landmarkPair.second.getObservations().begin()->first;
+        const IndexT firstFeatureId = landmarkPair.second.getObservations().begin()->second.getFeatureId();
         const feature::EImageDescriberType descType = landmarkPair.second.descType;
 
         obsToLandmark.emplace(ObsKey(firstViewId, firstFeatureId, descType), landmarkId);

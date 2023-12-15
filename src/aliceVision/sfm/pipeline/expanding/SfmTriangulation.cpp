@@ -363,14 +363,14 @@ bool SfmTriangulation::processTrack(
         //Inlier to view index
         IndexT viewId = indexedViewIds[i];
         
-        sfmData::Observation & o = result.observations[viewId];
+        sfmData::Observation & o = result.getObservations()[viewId];
 
         //Retrieve observation data
         const auto  & trackItem = track.featPerView.at(viewId);
 
-        o.id_feat = trackItem.featureId;
-        o.scale = trackItem.scale;
-        o.x = trackItem.coords;
+        o.setFeatureId(trackItem.featureId);
+        o.setScale(trackItem.scale);
+        o.setCoordinates(trackItem.coords);
     }
 
     return true;
@@ -378,7 +378,7 @@ bool SfmTriangulation::processTrack(
 
 bool SfmTriangulation::checkChierality(const sfmData::SfMData & sfmData, const sfmData::Landmark & landmark)
 {
-    for (const auto & pRefObs : landmark.observations)
+    for (const auto & pRefObs : landmark.getObservations())
     {
         IndexT refViewId = pRefObs.first;
 
@@ -399,7 +399,7 @@ double SfmTriangulation::getMaximalAngle(const sfmData::SfMData & sfmData, const
 {
     double max = 0.0;
 
-    for (const auto & pRefObs : landmark.observations)
+    for (const auto & pRefObs : landmark.getObservations())
     {
         IndexT refViewId = pRefObs.first;
 
@@ -407,7 +407,7 @@ double SfmTriangulation::getMaximalAngle(const sfmData::SfMData & sfmData, const
         const sfmData::CameraPose & refCameraPose = sfmData.getPoses().at(refView.getPoseId());
         const geometry::Pose3 & refPose = refCameraPose.getTransform();
 
-        for (const auto & pNextObs : landmark.observations)
+        for (const auto & pNextObs : landmark.getObservations())
         {
             IndexT nextViewId = pNextObs.first;
             if (refViewId > nextViewId)

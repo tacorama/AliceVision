@@ -114,7 +114,7 @@ bool ExpansionChunk::triangulate(sfmData::SfMData & sfmData, const track::Tracks
             landmarks.erase(pl.first);
         }
 
-        if (landmark.observations.size() < _triangulationMinPoints)
+        if (landmark.getObservations().size() < _triangulationMinPoints)
         {
             continue;
         }
