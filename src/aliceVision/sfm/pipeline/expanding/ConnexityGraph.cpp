@@ -5,69 +5,92 @@
 // You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #include "ConnexityGraph.hpp"
+#include <aliceVision/stl/Counter.hpp>
 
 namespace aliceVision {
 namespace sfm {
 
 bool ConnexityGraph::build(const sfmData::SfMData & sfmData, const std::set<IndexT> & viewsOfInterest)
 {
-    std::map<std::pair<IndexT, IndexT>, unsigned int> covisibility;
-
+    //Create a list of reconstructed views
     std::vector<IndexT> views;
     for (const auto & pv : sfmData.getViews())
     {
-        views.push_back(pv.first);
-    }
-    
-
-    for (int i = 0; i < views.size(); i++)
-    {
-        IndexT viewI = views[i];
-        
-        for (int j = i + 1; j < views.size(); j++)
+        if (sfmData.isPoseAndIntrinsicDefined(pv.first))
         {
-            IndexT viewJ = views[j];
+            views.push_back(pv.first);
 
-            IndexT min = std::min(viewI, viewJ);
-            IndexT max = std::max(viewI, viewJ);
 
-            covisibility[std::make_pair(min, max)] = 0; 
+            lemon::ListGraph::Node newNode = _graph.addNode();
+
+            //Store which node relate to which view
+            _nodePerViewId[pv.first] = newNode;
+            _viewIdPerNode[newNode] = pv.first;
         }
     }
 
+
+    //Build a list of landmarks index per view
+    std::map<IndexT, std::set<IndexT>> landmarksPerView;
     for (const auto & pl : sfmData.getLandmarks())
     {
-        std::vector<IndexT> observedViews;
         for (const auto & po : pl.second.observations)
         {
-            observedViews.push_back(po.first);
+            landmarksPerView[po.first].insert(pl.first);
         }
+    }
+    
+    //For all possible unique pairs
+    std::map<IndexT, std::vector<std::pair<IndexT, size_t>>> covisibility;
+    for (int idref = 0; idref < views.size(); idref++)
+    {
+        IndexT viewRef = views[idref];
 
-        for (int i = 0; i < observedViews.size(); i++)
+        const auto & ptref = landmarksPerView[viewRef];
+        
+        for (int idcur = idref + 1; idcur < views.size(); idcur++)
         {
-            IndexT viewI = observedViews[i];
+            IndexT viewCur = views[idcur];
 
-            for (int j =  i + 1; j < observedViews.size(); j++)
+            const auto & ptcur = landmarksPerView[viewCur];
+
+            std::vector<IndexT> intersection;
+            std::set_intersection(ptref.begin(), ptref.end(), ptcur.begin(), ptcur.end(), 
+                                    std::back_inserter(intersection));
+
+            size_t s = intersection.size();
+            if (s == 0)
             {
-                IndexT viewJ = observedViews[j];
-                
-                IndexT min = std::min(viewI, viewJ);
-                IndexT max = std::max(viewI, viewJ);
-
-                covisibility[std::make_pair(min, max)]++; 
+                continue;
             }
+
+            covisibility[viewRef].push_back(std::make_pair(viewCur, s));
+            covisibility[viewCur].push_back(std::make_pair(viewRef, s));
         }
     }
 
     for (const auto & item : covisibility)
     {
-        if (item.second < 50)
+
+    }
+
+    /*
+    for (const auto & item : covisibility)
+    {
+        if (item.second == 0)
         {
             continue;
         }
 
-        
+        IndexT viewId1 = item.first.first;
+        IndexT viewId2 = item.first.second;
+
+        const lemon::ListGraph::Node & node1 = _nodePerViewId[viewId1];
+        const lemon::ListGraph::Node & node2 = _nodePerViewId[viewId2];
+
+        _graph.addEdge(node1, node1);
     }
+    */
 
     return true;
 }
