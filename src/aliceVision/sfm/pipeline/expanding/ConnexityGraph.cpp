@@ -10,6 +10,28 @@
 namespace aliceVision {
 namespace sfm {
 
+struct viewIdScored 
+{
+    viewIdScored() = default;
+
+    viewIdScored(IndexT v, size_t c) : viewId(v), card(c)
+    {
+    }
+
+    bool operator<(const viewIdScored & other)
+    {
+        return (card < other.card);
+    }
+
+    bool operator>(const viewIdScored & other)
+    {
+        return (card > other.card);
+    }
+
+    IndexT viewId = UndefinedIndexT;
+    size_t card = 0;        
+};
+
 bool ConnexityGraph::build(const sfmData::SfMData & sfmData, const std::set<IndexT> & viewsOfInterest)
 {
     //Create a list of reconstructed views
@@ -19,13 +41,6 @@ bool ConnexityGraph::build(const sfmData::SfMData & sfmData, const std::set<Inde
         if (sfmData.isPoseAndIntrinsicDefined(pv.first))
         {
             views.push_back(pv.first);
-
-
-            lemon::ListGraph::Node newNode = _graph.addNode();
-
-            //Store which node relate to which view
-            _nodePerViewId[pv.first] = newNode;
-            _viewIdPerNode[newNode] = pv.first;
         }
     }
 
@@ -40,8 +55,8 @@ bool ConnexityGraph::build(const sfmData::SfMData & sfmData, const std::set<Inde
         }
     }
     
-    //For all possible unique pairs
-    /*std::map<IndexT, std::vector<std::pair<IndexT, size_t>>> covisibility;
+    //For all possible unique pairs    
+    std::map<IndexT, std::vector<viewIdScored>> covisibility;
     for (int idref = 0; idref < views.size(); idref++)
     {
         IndexT viewRef = views[idref];
@@ -64,15 +79,34 @@ bool ConnexityGraph::build(const sfmData::SfMData & sfmData, const std::set<Inde
                 continue;
             }
 
-            covisibility[viewRef].push_back(std::make_pair(viewCur, s));
-            covisibility[viewCur].push_back(std::make_pair(viewRef, s));
+            covisibility[viewRef].push_back({viewCur, s});
+            covisibility[viewCur].push_back({viewRef, s});
         }
     }
 
-    for (const auto & item : covisibility)
+    //Filter out connexions without enough information
+    for (auto & item : covisibility)
     {
+        auto & vec = item.second;
+        if (vec.size() < _minLinksPerView)
+        {
+            continue;
+        }
 
-    }*/
+        std::sort(vec.begin(), vec.end(), std::greater<>());
+
+        size_t pos = 0;
+        for (; pos < vec.size(); pos++)
+        {
+            if (vec[pos].card < _minCardinality)
+            {
+                break;
+            }
+        }
+
+        pos = std::max(pos, _minLinksPerView);
+        vec.resize(pos);
+    }
 
     /*
     for (const auto & item : covisibility)
