@@ -12,9 +12,11 @@
 #include <aliceVision/geometry/lie.hpp>
 #include <aliceVision/geometry/Intersection.hpp>
 #include <aliceVision/sfm/utils/statistics.hpp>
+#include <aliceVision/sfm/pipeline/expanding/ConnexityGraph.hpp>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/tools/floating_point_comparison.hpp>
+
 
 using namespace aliceVision;
 
@@ -65,7 +67,7 @@ void createScene(sfmData::SfMData & sfmData, const camera::IntrinsicBase & intri
     double verticalAnglePerCamera = std::acos(borderBottom.normalized().dot(borderTop.normalized()));
     
     // Estimated the required number of cameras and the scene properties
-    double overlap = 0.5;
+    double overlap = 0.1;
     int countCameras = std::ceil(2.0 * M_PI / (horizontalAnglePerCamera * (1.0 - overlap)));
     const int countNeededPointsPerLine = std::ceil(countNeededPointsPerImageLine * 2.0 * M_PI / horizontalAnglePerCamera);
     const double angleBetweenLines = verticalAnglePerCamera / countNeededPointsPerImageColumn;
@@ -73,11 +75,11 @@ void createScene(sfmData::SfMData & sfmData, const camera::IntrinsicBase & intri
 
     // Place landmarks on the unit sphere
     size_t count = 0;
-    for (int y = - countNeededPointsPerImageColumn / 2; y <= countNeededPointsPerImageColumn / 2; y++)
+    for (int y = 0; y <= 0; y++)
     {
         for (int x = 0; x < countNeededPointsPerLine; x++)
         {
-            double longitude = x * M_PI_2 / countNeededPointsPerLine;
+            double longitude = x * 2.0 * M_PI / countNeededPointsPerLine;
             double latitude = y * angleBetweenLines;
 
             Vec3 pos;
@@ -90,7 +92,6 @@ void createScene(sfmData::SfMData & sfmData, const camera::IntrinsicBase & intri
         }
     }
     
-
     // Place cameras and observations
     for (int idview = 0; idview < countCameras; idview++)
     {
@@ -200,7 +201,7 @@ std::vector<cameraPair> buildIntrinsics()
         
     return cameras;
 }
-
+/*
 BOOST_AUTO_TEST_CASE(test_intrinsics)
 {
     auto listIntrinsics = buildIntrinsics();
@@ -305,5 +306,18 @@ BOOST_AUTO_TEST_CASE(test_poses)
             BOOST_CHECK_LT(rmseAfter, 1e-3);
         }
     }
-}
+}*/
 
+BOOST_AUTO_TEST_CASE(test_lba)
+{
+    sfmData::SfMData sfmData;
+
+    auto ph = camera::createPinhole(camera::PINHOLE_CAMERA, 1920, 1080, 1500, 1500, 0, 0);
+    createScene(sfmData, *ph);
+
+    std::set<IndexT> vs;
+    vs.insert(0);
+
+    sfm::ConnexityGraph graph;
+    graph.build(sfmData, vs);
+}

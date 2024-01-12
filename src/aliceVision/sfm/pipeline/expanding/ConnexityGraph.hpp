@@ -18,6 +18,11 @@ public:
     bool build(const sfmData::SfMData & sfmData, const std::set<IndexT> & viewsOfInterest);
 
 private:
+    lemon::ListGraph _graph;
+    std::map<IndexT, lemon::ListGraph::Node> _nodePerViewId;
+    std::map<lemon::ListGraph::Node, IndexT> _viewIdPerNode;
+
+private:
     size_t _minLinksPerView = 10;
     size_t _minCardinality = 50;
 };

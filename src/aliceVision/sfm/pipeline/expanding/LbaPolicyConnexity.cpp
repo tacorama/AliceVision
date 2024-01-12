@@ -8,6 +8,7 @@
 
 #include <aliceVision/track/tracksUtils.hpp>
 #include <aliceVision/stl/mapUtils.hpp>
+#include <aliceVision/sfm/pipeline/expanding/ConnexityGraph.hpp>
 
 namespace aliceVision {
 namespace sfm {
@@ -15,7 +16,12 @@ namespace sfm {
 
 bool LbaPolicyConnexity::build(const sfmData::SfMData & sfmData, const track::TracksHandler & tracksHandler, const std::set<IndexT> & viewIds)
 {
-    
+    ConnexityGraph graph;
+    if (!graph.build(sfmData, viewIds))
+    {
+        return false;
+    }
+
     return true;
 }
 

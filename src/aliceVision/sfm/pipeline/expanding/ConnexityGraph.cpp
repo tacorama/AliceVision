@@ -6,6 +6,7 @@
 
 #include "ConnexityGraph.hpp"
 #include <aliceVision/stl/Counter.hpp>
+#include <lemon/bfs.h>
 
 namespace aliceVision {
 namespace sfm {
@@ -41,6 +42,10 @@ bool ConnexityGraph::build(const sfmData::SfMData & sfmData, const std::set<Inde
         if (sfmData.isPoseAndIntrinsicDefined(pv.first))
         {
             views.push_back(pv.first);
+
+            lemon::ListGraph::Node newNode = _graph.addNode();
+            _nodePerViewId[pv.first] = newNode;
+            _viewIdPerNode[newNode] = pv.first;
         }
     }
 
@@ -108,23 +113,47 @@ bool ConnexityGraph::build(const sfmData::SfMData & sfmData, const std::set<Inde
         vec.resize(pos);
     }
 
-    /*
+    
     for (const auto & item : covisibility)
     {
-        if (item.second == 0)
+        IndexT viewId1 = item.first;
+
+        for (const auto & part : item.second)
         {
-            continue;
+            IndexT viewId2 = part.viewId;
+
+            const lemon::ListGraph::Node & node1 = _nodePerViewId[viewId1];
+            const lemon::ListGraph::Node & node2 = _nodePerViewId[viewId2];
+
+            _graph.addEdge(node1, node2);
         }
-
-        IndexT viewId1 = item.first.first;
-        IndexT viewId2 = item.first.second;
-
-        const lemon::ListGraph::Node & node1 = _nodePerViewId[viewId1];
-        const lemon::ListGraph::Node & node2 = _nodePerViewId[viewId2];
-
-        _graph.addEdge(node1, node1);
     }
-    */
+
+    /*lemon::Bfs<lemon::ListGraph> bfs(_graph);
+    bfs.init();
+
+    for (auto id : viewsOfInterest)
+    {
+        auto it = _nodePerViewId.find(id);
+        if (it != _nodePerViewId.end())
+        {
+            bfs.addSource(it->second);
+        }
+    }
+
+    bfs.start();
+    for (const auto & x : _nodePerViewId)
+    {
+        auto& node = x.second;
+        if (bfs.reached(node))
+        {
+            int d = bfs.dist(node);
+            if (d <= 1)
+            {
+                std::cout << x.first << std::endl;
+            }
+        }
+    }*/
 
     return true;
 }
