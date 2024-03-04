@@ -341,6 +341,8 @@ EINTRINSIC Pinhole::getType() const
     {
         switch (_pUndistortion->getType())
         {
+            case EDISTORTION::DISTORTION_RADIALK3:
+                return EINTRINSIC::PINHOLE_CAMERA_RADIAL3;
             case EDISTORTION::DISTORTION_3DEANAMORPHIC4:
                 return EINTRINSIC::PINHOLE_CAMERA_3DEANAMORPHIC4;
             default:
