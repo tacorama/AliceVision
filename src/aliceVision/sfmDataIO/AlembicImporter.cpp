@@ -623,10 +623,17 @@ bool readCamera(const Version& abcVersion,
             std::shared_ptr<camera::Undistortion> undistortion = intrinsicCasted->getUndistortion();
             if (undistortion)
             {
-                undistortion->setParameters(undistortionParams);
-                undistortion->setOffset(undistortionOffset);
-                // If undistortion exists, distortion does not
-                intrinsicCasted->setDistortionObject(nullptr);
+                if (undistortionParams.size() == undistortion->getUndistortionParametersCount())
+                {
+                    undistortion->setParameters(undistortionParams);
+                    undistortion->setOffset(undistortionOffset);
+                    // If undistortion exists, distortion does not
+                    intrinsicCasted->setDistortionObject(nullptr);
+                }
+                else
+                {
+                    intrinsicCasted->setUndistortionObject(nullptr);
+                }
             }
         }
 

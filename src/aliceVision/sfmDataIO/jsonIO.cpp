@@ -352,16 +352,20 @@ void loadIntrinsic(const Version& version, IndexT& intrinsicId, std::shared_ptr<
             }
 
             // ensure that we have the right number of params
-            if (undistortionParams.size() == undistortionObject->getParameters().size())
+            if (undistortionParams.size() == undistortionObject->getUndistortionParametersCount())
             {
                 undistortionObject->setParameters(undistortionParams);
                 Vec2 offset;
                 loadMatrix("undistortionOffset", offset, intrinsicTree);
                 undistortionObject->setOffset(offset);
-            }
 
-            // If undistortion exists, distortion does not
-            intrinsicWithDistoEnabled->setDistortionObject(nullptr);
+                // If undistortion exists, distortion does not
+                intrinsicWithDistoEnabled->setDistortionObject(nullptr);
+            }
+            else
+            {
+                intrinsicWithDistoEnabled->setUndistortionObject(nullptr);
+            }
         }
 
         std::shared_ptr<camera::Distortion> distortionObject = intrinsicWithDistoEnabled->getDistortion();

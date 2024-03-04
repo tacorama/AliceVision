@@ -11,7 +11,6 @@
 #include <aliceVision/sfmData/SfMData.hpp>
 #include <aliceVision/sfmDataIO/sfmDataIO.hpp>
 #include <aliceVision/image/all.hpp>
-
 #include <boost/program_options.hpp>
 
 #include <string>
@@ -29,22 +28,38 @@ namespace po = boost::program_options;
 using namespace aliceVision;
 using namespace aliceVision::camera;
 
-std::string toNuke(std::shared_ptr<Undistortion> undistortion, EINTRINSIC intrinsicType)
+std::string toNuke(std::shared_ptr<Undistortion> undistortion, EDISTORTION distortionType)
 {
     const std::vector<double>& params = undistortion->getParameters();
     const auto& size = undistortion->getSize();
 
     std::stringstream ss;
 
-    switch (intrinsicType)
+    Vec2 offset = undistortion->getScaledOffset();
+
+    switch (distortionType)
     {
-        case EINTRINSIC::PINHOLE_CAMERA_3DEANAMORPHIC4:
-            ss << "LensDistortion2 {"
+        case EDISTORTION::DISTORTION_RADIALK3:
+            ss << "LensDistortion2 {" << "\n"
+               << " distortionModelPreset Custom" << "\n"
+               << " distortionNumerator0 " << params[0] << "\n"
+               << " distortionNumerator1 " << params[1] << "\n"
+               << " distortionNumerator2 " << params[2] << "\n"
+               << " centre {" << offset[0] << " " << -offset[1] << "}" << "\n"
+               << " output Undistort" << "\n"
+               << " distortionScalingType Format" << "\n"
+               << " distortionScalingFormat \"" << size(0) << " " << size(1) << " 0 0 " << size(0) << " " << size(1) << " 1 AV_undist_fmt \""
                << "\n"
-               << " distortionModelPreset \"3DEqualizer/3DE4 Anamorphic - Standard, Degree 4\""
-               << "\n"
-               << " lens Anamorphic"
-               << "\n"
+               << " distortionOrder {3 0}" << "\n"
+               << " normalisationType Diagonal" << "\n"
+               << " distortInFisheyeSpace false" << "\n"
+               << "}"
+               << "\n";
+            break;
+        case EDISTORTION::DISTORTION_3DEANAMORPHIC4:
+            ss << "LensDistortion2 {" << "\n"
+               << " distortionModelPreset \"3DEqualizer/3DE4 Anamorphic - Standard, Degree 4\"" << "\n"
+               << " lens Anamorphic" << "\n"
                << " distortionNumeratorX00 " << params[0] << "\n"
                << " distortionNumeratorX01 " << params[4] << "\n"
                << " distortionNumeratorX10 " << params[2] << "\n"
@@ -55,6 +70,7 @@ std::string toNuke(std::shared_ptr<Undistortion> undistortion, EINTRINSIC intrin
                << " distortionNumeratorY10 " << params[3] << "\n"
                << " distortionNumeratorY11 " << params[7] << "\n"
                << " distortionNumeratorY20 " << params[9] << "\n"
+               << " centre {" << offset[0] << " " << offset[1] << "}" << "\n"
                << " output Undistort"
                << "\n"
                << " distortionScalingType Format"
@@ -74,7 +90,7 @@ std::string toNuke(std::shared_ptr<Undistortion> undistortion, EINTRINSIC intrin
             break;
         default:
             ALICEVISION_THROW_ERROR(
-              "Unsupported intrinsic type for conversion to Nuke LensDistortion node: " << EINTRINSIC_enumToString(intrinsicType));
+              "Unsupported intrinsic type for conversion to Nuke LensDistortion node: ");
     }
 
     return ss.str();
@@ -165,17 +181,22 @@ int aliceVision_main(int argc, char* argv[])
 
         const auto intrinsicDisto = std::dynamic_pointer_cast<IntrinsicScaleOffsetDisto>(intrinsicPtr);
         if (!intrinsicDisto)
+        {
             continue;
+        }
 
-        const auto undistortion = intrinsicDisto->getUndistortion();
+        
+        auto undistortion = intrinsicDisto->getUndistortion();
         if (!undistortion)
+        {
             continue;
-
+        }
+        
         if (exportNukeNode)
         {
             ALICEVISION_LOG_INFO("Computing Nuke LensDistortion node");
 
-            const std::string nukeNodeStr = toNuke(undistortion, intrinsicDisto->getType());
+            const std::string nukeNodeStr = toNuke(undistortion, undistortion->getType());
 
             ALICEVISION_LOG_INFO("Writing Nuke LensDistortion node in " << intrinsicId << ".nk");
             std::stringstream ss;
