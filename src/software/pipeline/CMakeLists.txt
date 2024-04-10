@@ -513,6 +513,22 @@ if(ALICEVISION_BUILD_MVS)
               OpenMeshTools
     )
 
+    #lidar merging
+    alicevision_add_software(aliceVision_lidarMerging
+        SOURCE main_lidarMerging.cpp
+        FOLDER ${FOLDER_SOFTWARE_PIPELINE}
+        LINKS aliceVision_system
+              aliceVision_cmdline
+              aliceVision_mvsData
+              aliceVision_mvsUtils
+              aliceVision_mesh
+              aliceVision_fuseCut
+              aliceVision_sfmData
+              aliceVision_sfmDataIO
+              Boost::program_options
+              Boost::json
+    )
+
     if(ALICEVISION_HAVE_MESHSDFILTER)
 
         # Mesh Denoising
